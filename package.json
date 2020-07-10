@@ -1,0 +1,19 @@
+{
+  "name": "dd-twitter",
+  "version": "1.0.0",
+  "description": "DDOG to the moon",
+  "main": "getTweets.js",
+  "scripts": {
+    "start": "node getTweets.js",
+    "test": "echo \"Error: no test specified yet\" && exit 1"
+  },
+  "author": "Dany Narcisse",
+  "license": "ISC",
+  "dependencies": {
+    "fs": "0.0.1-security",
+    "request": "^2.88.0",
+    "node-cron": "^2.0.3",
+    "node-dogstatsd": "0.0.7",
+    "twit": "^2.2.11"
+  }
+}
