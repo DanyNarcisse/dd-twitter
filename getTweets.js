@@ -5,7 +5,7 @@ const twit = require('twit');
 const StatsD = require('node-dogstatsd').StatsD
 const credentials = require('./credentials');
 const date = new Date();
-const statsd_client = new StatsD('0.0.0.0',8125);
+const statsd_client = new StatsD(process.env.DD_AGENT_HOST,8125);
 const quote = "DDOG";
 const yahooURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + quote.toString();
 
@@ -18,7 +18,7 @@ var lastTweet_ID_file = './lastTweetId.json';
 async function getLastTweetID()
 {
     return new Promise(function(resolve, reject){
-        var lastTweet_ID = '0000';
+        var lastTweet_ID = 'stonks';
         var lineReader = require('readline').createInterface({
             input: require('fs').createReadStream(lastTweet_ID_file)
         });
@@ -49,9 +49,10 @@ async function getQuotes(){
         }
     });
 }
+
 async function getTweet(){
-    var param = { q: 'datadog', lang: 'en' 
-}
+    var param = { q: 'datadog', lang: 'en' }
+
     if (fs.existsSync(lastTweet_ID_file)) {
         var lasttweettest = await getLastTweetID();
         param = {
@@ -89,9 +90,9 @@ function getData(err, data, response){
     }
 
     try {
-        fs.writeFile(lastTweet_ID_file, JSON.stringify(data.statuses[0].id), function (err,results)
+        fs.writeFile(lastTweet_ID_file, JSON.stringify(data.statuses[0].id_str), function (err,results)
         {
-            console.log('Last tweet ID recorded');
+            console.log('Last tweet ID recorded ' + data.statuses[0].id_str);
         });
     } 
     catch (error) {
@@ -112,10 +113,25 @@ function getData(err, data, response){
 // Main function to fetch and parse the data
 function Main()
 {
+    DebugTest();
     cron.schedule('*/5 * * * *', function(){
         getQuotes();
         getTweet();
       }); 
+}
+
+async function DebugTest()
+{
+    while(1>0)
+    {
+        await sleep(5000);
+        statsd_client.gauge('test.metric', 1, ['service:dd-twitter']);
+        console.log('Sent');
+    }
+}
+
+function sleep(millis) {
+    return new Promise(resolve => setTimeout(resolve, millis));
 }
 
 Main();
