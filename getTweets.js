@@ -104,8 +104,8 @@ function getData(err, data, response){
         statsd_client.gauge('twitter.datadog.retweet', count_retweet, ['service:dd-twitter']);
         statsd_client.gauge('twitter.datadog.favorite', count_favorite, ['service:dd-twitter']);
 
-        console.log('Numbre of retweets:' + count_retweet);
-        console.log('Numbre of favorites:' + count_favorite);
+        console.log('Number of retweets:' + count_retweet);
+        console.log('Number of favorites:' + count_favorite);
         console.log('Done!');
     }
 }
@@ -113,7 +113,7 @@ function getData(err, data, response){
 // Main function to fetch and parse the data
 function Main()
 {
-    DebugTest();
+    //DebugTest();
     cron.schedule('*/5 * * * *', function(){
         getQuotes();
         getTweet();
