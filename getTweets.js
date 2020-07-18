@@ -8,11 +8,10 @@ const date = new Date();
 const statsd_client = new StatsD(process.env.DD_AGENT_HOST,8125);
 const quote = 'DDOG';
 const yahooURL = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + quote.toString();
+const T = new twit(credentials);
 
-var T = new twit(credentials);
 var countRT = 0;
 var countFav = 0;
-var dataTweets_file = './data/data-tweets-' + date.getTime().toString() + '.json';
 var tweetID_file = './lastTweetId.json';
 
 async function getLastTweetID()
@@ -60,25 +59,20 @@ async function getTweet(){
             lang: 'en',
             since_id: lasttweettest.toString()
         }
-        console.log('Twitt.. Query:' + param.q + ', Lang: ' + param.lang + ', TweetID:' + param.since_id);
+        console.log('Query:' + param.q + ', Lang: ' + param.lang + ', TweetID:' + param.since_id);
     }
     else{
-        console.log('Twitt Twiit...' + param.q + ', ' + param.lang + ', Last ' + param.count + 'tweets');
+        console.log('Query:' + param.q + ', Lang: ' + param.lang + ', Last ' + param.count + 'tweets');
     }
     T.get('search/tweets', param , getData);   
 }
 
 function getData(err, data, response){
-    console.log(data);
-    fs.writeFile(dataTweets_file, JSON.stringify(data), function (err,results)
-    {
-        if(err){
-            console.log(err);
-        }
-    });
+    countRT = 0;
+    countFav = 0;
 
-    console.log(data.statuses.length.toString());
-
+    console.log(JSON.stringify(data));
+    
     for (var i = 0; i < data.statuses.length; i++) {
         countRT += data.statuses[i].retweet_count;
         countFav += data.statuses[i].favorite_count;
@@ -91,9 +85,7 @@ function getData(err, data, response){
         });
     } 
     catch (error) {
-        console.log('No data since last tweet: ' + tweetID);
-        countRT = 0;
-        countFav = 0;
+        console.log('ERROR: Unable to record Tweet ID. ' + error);
     }
     finally{
         statsd_client.gauge('twitter.datadog.retweet', countRT, ['service:dd-twitter']);
@@ -106,7 +98,7 @@ function getData(err, data, response){
 function Main()
 {
     //DebugTest();
-    cron.schedule('0 30/10 15-22 ? * MON,TUE,WED,THU *', function(){
+    cron.schedule('0 30/10 15-22 * * 1,2,3,4,5 *', function(){
         getQuotes();
         getTweet();
       }); 
