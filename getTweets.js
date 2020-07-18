@@ -6,25 +6,25 @@ const StatsD = require('node-dogstatsd').StatsD
 const credentials = require('./credentials');
 const date = new Date();
 const statsd_client = new StatsD(process.env.DD_AGENT_HOST,8125);
-const quote = "DDOG";
-const yahooURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + quote.toString();
+const quote = 'DDOG';
+const yahooURL = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + quote.toString();
 
 var T = new twit(credentials);
-var count_retweet = 0;
-var count_favorite = 0;
+var countRT = 0;
+var countFav = 0;
 var dataTweets_file = './data/data-tweets-' + date.getTime().toString() + '.json';
-var lastTweet_ID_file = './lastTweetId.json';
+var tweetID_file = './lastTweetId.json';
 
 async function getLastTweetID()
 {
     return new Promise(function(resolve, reject){
-        var lastTweet_ID = 'stonks';
+        var tweetID = 'stonks';
         var lineReader = require('readline').createInterface({
-            input: require('fs').createReadStream(lastTweet_ID_file)
+            input: require('fs').createReadStream(tweetID_file)
         });
         lineReader.on('line', function(line) {
-            lastTweet_ID = JSON.parse(line);
-            resolve(lastTweet_ID);
+            tweetID = JSON.parse(line);
+            resolve(tweetID);
         });
     })
 }
@@ -44,31 +44,26 @@ async function getQuotes(){
         }
 
         else {
-            console.log('error:', error); // Print the error if one occurred
+            console.log('Error:', error); // Print the error if one occurred
             console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
         }
     });
 }
 
 async function getTweet(){
-    var param = { q: 'datadog', lang: 'en' }
+    var param = { q: 'datadog', lang: 'en', count: 10 }
 
-    if (fs.existsSync(lastTweet_ID_file)) {
+    if (fs.existsSync(tweetID_file)) {
         var lasttweettest = await getLastTweetID();
         param = {
             q: 'datadog',
             lang: 'en',
             since_id: lasttweettest.toString()
         }
-        console.log('Twitt Twiit...' + param.q + ', ' + param.lang + ', ' + param.since_id);
+        console.log('Twitt.. Query:' + param.q + ', Lang: ' + param.lang + ', TweetID:' + param.since_id);
     }
     else{
-        var param = {
-            q: 'datadog',
-            lang: 'en',
-            count: 10
-        }
-        console.log('Twitt Twiit...' + param.q + ', ' + param.lang + ', ' + param.count);
+        console.log('Twitt Twiit...' + param.q + ', ' + param.lang + ', Last ' + param.count + 'tweets');
     }
     T.get('search/tweets', param , getData);   
 }
@@ -85,28 +80,25 @@ function getData(err, data, response){
     console.log(data.statuses.length.toString());
 
     for (var i = 0; i < data.statuses.length; i++) {
-        count_retweet += data.statuses[i].retweet_count;
-        count_favorite += data.statuses[i].favorite_count;
+        countRT += data.statuses[i].retweet_count;
+        countFav += data.statuses[i].favorite_count;
     }
 
     try {
-        fs.writeFile(lastTweet_ID_file, JSON.stringify(data.statuses[0].id_str), function (err,results)
+        fs.writeFile(tweetID_file, JSON.stringify(data.statuses[0].id_str), function (err,results)
         {
-            console.log('Last tweet ID recorded ' + data.statuses[0].id_str);
+            console.log('Tweet ID recorded ' + data.statuses[0].id_str);
         });
     } 
     catch (error) {
-        console.log('No tweets since last tweet.');
-        count_retweet = 0;
-        count_favorite = 0;
+        console.log('No data since last tweet: ' + tweetID);
+        countRT = 0;
+        countFav = 0;
     }
     finally{
-        statsd_client.gauge('twitter.datadog.retweet', count_retweet, ['service:dd-twitter']);
-        statsd_client.gauge('twitter.datadog.favorite', count_favorite, ['service:dd-twitter']);
-
-        console.log('Number of retweets:' + count_retweet);
-        console.log('Number of favorites:' + count_favorite);
-        console.log('Done!');
+        statsd_client.gauge('twitter.datadog.retweet', countRT, ['service:dd-twitter']);
+        statsd_client.gauge('twitter.datadog.favorite', countFav, ['service:dd-twitter']);
+        console.log('Retweets: ' + countRT + ' Favorites: ' + countFav);
     }
 }
 
@@ -114,7 +106,7 @@ function getData(err, data, response){
 function Main()
 {
     //DebugTest();
-    cron.schedule('*/5 * * * *', function(){
+    cron.schedule('0 30/10 15-22 ? * MON,TUE,WED,THU *', function(){
         getQuotes();
         getTweet();
       }); 
@@ -126,7 +118,6 @@ async function DebugTest()
     {
         await sleep(5000);
         statsd_client.gauge('test.metric', 1, ['service:dd-twitter']);
-        console.log('Sent');
     }
 }
 
